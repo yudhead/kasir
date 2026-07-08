@@ -12,7 +12,6 @@ Aplikasi Kasir (Point of Sale) berbasis Android untuk memudahkan pengelolaan bar
 
 ## 📱 Tampilan Aplikasi (Screenshots)
 
-*(Tambahkan foto tampilan aplikasi di bawah ini)*
 
 ![Tampilan Dashboard]()
 ![Tampilan Kasir]()
