@@ -19,7 +19,7 @@ Aplikasi Kasir (Point of Sale) berbasis Android untuk memudahkan pengelolaan bar
 ## 🚀 Cara Instalasi (Untuk Customer)
 Untuk mengunduh dan memasang aplikasi ini di HP Android Anda, ikuti langkah berikut:
 
-1. Cari file kasi.apk pada halaman awal.
+1. Cari file kasir.apk pada halaman awal.
 2. Unduh file **`.apk`** pada versi rilis terbaru.
 3. Buka file APK yang sudah diunduh di HP Anda.
 4. Jika muncul peringatan keamanan, masuk ke Pengaturan HP dan aktifkan **"Izinkan instalasi dari Sumber Tidak Dikenal"** (*Install from Unknown Sources*).
