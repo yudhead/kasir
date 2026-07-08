@@ -1,4 +1,4 @@
-# 🛒 Aplikasi Kasir Pintar
+# 🛒 Aplikasi Kasir
 
 Aplikasi Kasir (Point of Sale) berbasis Android untuk memudahkan pengelolaan barang, transaksi belanja, pencatatan hutang, hingga pencetakan struk melalui printer thermal Bluetooth.
 
