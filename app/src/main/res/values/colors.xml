@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors -->
+    <color name="primary">#2563EB</color>
+    <color name="primary_variant">#1E40AF</color>
+    <color name="secondary">#10B981</color>
+
+    <!-- Background and Surface -->
+    <color name="background">#F1F5F9</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Text Colors (Adjusted for better contrast) -->
+    <color name="text_primary">#334155</color> <!-- Slate 700: Lighter than before but still professional -->
+    <color name="text_secondary">#64748B</color> <!-- Slate 500 -->
+    <color name="text_light">#94A3B8</color> <!-- Slate 400 -->
+
+    <!-- Functional Colors -->
+    <color name="accent">#F59E0B</color>
+    <color name="error">#EF4444</color>
+    <color name="black">#0F172A</color>
+    <color name="white">#FFFFFF</color>
+</resources>

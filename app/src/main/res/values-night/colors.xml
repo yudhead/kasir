@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors -->
+    <color name="primary">#3B82F6</color>
+    <color name="primary_variant">#2563EB</color>
+    <color name="secondary">#10B981</color>
+
+    <!-- Background and Surface -->
+    <color name="background">#0F172A</color> <!-- Slate 900 -->
+    <color name="surface">#1E293B</color> <!-- Slate 800 -->
+
+    <!-- Text Colors -->
+    <color name="text_primary">#F1F5F9</color> <!-- Slate 100 -->
+    <color name="text_secondary">#94A3B8</color> <!-- Slate 400 -->
+    <color name="text_light">#64748B</color> <!-- Slate 500 -->
+
+    <color name="black">#F8FAFC</color>
+    <color name="white">#1E293B</color>
+</resources>
