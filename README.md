@@ -26,4 +26,4 @@ Untuk mengunduh dan memasang aplikasi ini di HP Android Anda, ikuti langkah beri
 5. Lanjutkan proses instalasi hingga selesai, dan aplikasi siap digunakan!
 
 ---
-*Dibuat menggunakan Android Studio (Kotlin) & Firebase.*
+*Dibuat menggunakan Android Studio & Firebase.*
