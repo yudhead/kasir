@@ -1,15 +1,28 @@
 package com.kasir
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.kasir.databinding.ActivityDetailRiwayatBinding
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import java.io.File
+import java.util.UUID
 
 class DetailRiwayatActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDetailRiwayatBinding
+    private var transaksi: TransactionModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -17,30 +30,154 @@ class DetailRiwayatActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val id = intent.getStringExtra("ID")
-        Firebase.database.reference.child("transactions").child(id!!).get().addOnSuccessListener {
-            val t = it.getValue(TransactionModel::class.java)
-            if (t != null) {
-                val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
-                val dateStr = sdf.format(java.util.Date(t.timestamp))
-                
-                binding.tvDetailInfo.text = "Pembeli: ${t.namaPembeli}\nTanggal: $dateStr\nMetode: ${t.metodePembayaran}\nStatus: ${t.statusBayar}\n\nTOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}"
-
-                var itemsText = ""
-                for (item in t.items) {
-                    val unitPrice = item.product?.hargaJual ?: 0
-                    val subTotal = unitPrice * item.quantity
-                    itemsText += "${item.product?.namaBarang}\n"
-                    itemsText += "  ${item.quantity} x ${FormatterUtil.formatRupiah(unitPrice)} = ${FormatterUtil.formatRupiah(subTotal)}\n\n"
-                }
-                binding.tvDetailItems.text = itemsText.trim()
-
-                if (t.buktiPembayaranPath.isNotEmpty()) {
-                    val file = File(t.buktiPembayaranPath)
-                    if (file.exists()) {
-                        binding.ivDetailBukti.setImageBitmap(BitmapFactory.decodeFile(file.absolutePath))
-                    }
+        if (id != null) {
+            Firebase.database.reference.child("transactions").child(id).get().addOnSuccessListener {
+                val t = it.getValue(TransactionModel::class.java)
+                if (t != null) {
+                    transaksi = t
+                    tampilkanData(t)
                 }
             }
+        }
+
+        binding.btnCetakUlangStruk.setOnClickListener {
+            cekIzinBluetoothDanCetak()
+        }
+    }
+
+    private fun tampilkanData(t: TransactionModel) {
+        val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+        val dateStr = sdf.format(java.util.Date(t.timestamp))
+        
+        binding.tvDetailInfo.text = "Pembeli: ${t.namaPembeli}\nTanggal: $dateStr\nMetode: ${t.metodePembayaran}\nStatus: ${t.statusBayar}\n\nTOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}"
+
+        var itemsText = ""
+        for (item in t.items) {
+            val unitPrice = item.product?.hargaJual ?: 0
+            val subTotal = unitPrice * item.quantity
+            itemsText += "${item.product?.namaBarang}\n"
+            itemsText += "  ${item.quantity} x ${FormatterUtil.formatRupiah(unitPrice)} = ${FormatterUtil.formatRupiah(subTotal)}\n\n"
+        }
+        binding.tvDetailItems.text = itemsText.trim()
+
+        if (t.buktiPembayaranPath.isNotEmpty()) {
+            val file = File(t.buktiPembayaranPath)
+            if (file.exists()) {
+                binding.ivDetailBukti.setImageBitmap(BitmapFactory.decodeFile(file.absolutePath))
+            } else {
+                binding.ivDetailBukti.visibility = View.GONE
+            }
+        } else {
+            binding.ivDetailBukti.visibility = View.GONE
+        }
+    }
+
+    // ==========================================
+    // LOGIKA CETAK STRUK BLUETOOTH
+    // ==========================================
+
+    private fun cekIzinBluetoothDanCetak() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 101)
+                return
+            }
+        }
+        mulaiPilihPrinter()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun mulaiPilihPrinter() {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+
+        if (bluetoothAdapter == null) {
+            Toast.makeText(this, "Perangkat ini tidak memiliki Bluetooth", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (!bluetoothAdapter.isEnabled) {
+            Toast.makeText(this, "Harap aktifkan Bluetooth terlebih dahulu!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val pairedDevices = bluetoothAdapter.bondedDevices
+        if (pairedDevices.isEmpty()) {
+            Toast.makeText(this, "Belum ada printer dipasangkan.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val listDevice = pairedDevices.toList()
+        val listNamaDevice = listDevice.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Pilih Printer Thermal")
+            .setItems(listNamaDevice) { _, which ->
+                val deviceDipilih = listDevice[which]
+                kirimDataKePrinter(deviceDipilih)
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun kirimDataKePrinter(device: BluetoothDevice) {
+        val t = transaksi ?: return
+
+        Toast.makeText(this, "Menyambungkan ke printer...", Toast.LENGTH_SHORT).show()
+
+        Thread {
+            try {
+                val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+                val socket = device.createRfcommSocketToServiceRecord(uuid)
+                socket.connect()
+
+                val outputStream = socket.outputStream
+
+                val struk = java.lang.StringBuilder()
+                struk.append("\n")
+                struk.append("           JAYATRI KEDIRI          \n")
+                struk.append("===============================\n")
+                struk.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
+                struk.append("Metode    : ${t.metodePembayaran}\n")
+                struk.append("Status    : ${t.statusBayar}\n")
+                struk.append("-------------------------------\n")
+
+                for (item in t.items) {
+                    val namaBarang = item.product?.namaBarang ?: ""
+                    val qty = item.quantity
+                    val harga = item.product?.hargaJual ?: 0
+                    val subtotal = qty * harga
+
+                    struk.append("$namaBarang\n")
+                    struk.append("   $qty x ${FormatterUtil.formatRupiah(harga)} = ${FormatterUtil.formatRupiah(subtotal)}\n")
+                }
+
+                struk.append("-------------------------------\n")
+                struk.append("TOTAL : ${FormatterUtil.formatRupiah(t.totalHarga)}\n")
+                struk.append("===============================\n")
+                struk.append("          Terima Kasih         \n")
+                struk.append("\n\n\n")
+
+                outputStream.write(struk.toString().toByteArray())
+                outputStream.flush()
+                socket.close()
+
+                runOnUiThread {
+                    Toast.makeText(this, "Berhasil mencetak ulang struk!", Toast.LENGTH_SHORT).show()
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this, "Gagal terhubung ke printer.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            mulaiPilihPrinter()
         }
     }
 }

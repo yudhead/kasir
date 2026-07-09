@@ -96,17 +96,6 @@
         </androidx.cardview.widget.CardView>
 
         <Button
-            android:id="@+id/btnCetakUlangStruk"
-            android:layout_width="match_parent"
-            android:layout_height="55dp"
-            android:text="Cetak Ulang Struk"
-            android:backgroundTint="#8E44AD"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
             android:id="@+id/btnUpdateBarang"
             android:layout_width="match_parent"
             android:layout_height="55dp"
