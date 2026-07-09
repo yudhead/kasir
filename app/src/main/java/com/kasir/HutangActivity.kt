@@ -11,16 +11,16 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 
-class HutangActivity : AppCompatActivity() {
+class BayarNantiActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHutangBinding
-    private val listHutang = mutableListOf<TransactionModel>()
+    private val listBayarNanti = mutableListOf<TransactionModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHutangBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.rvHutang.layoutManager = LinearLayoutManager(this)
+        binding.rvBayarNanti.layoutManager = LinearLayoutManager(this)
 
         // Query khusus data yang belum lunas
         Firebase.database.reference.child("transactions")
@@ -28,18 +28,18 @@ class HutangActivity : AppCompatActivity() {
             .equalTo("BELUM_BAYAR")
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    listHutang.clear()
+                    listBayarNanti.clear()
                     for (data in snapshot.children) {
                         val t = data.getValue(TransactionModel::class.java)
-                        if (t != null) listHutang.add(t)
+                        if (t != null) listBayarNanti.add(t)
                     }
                     // Gunakan adapter sederhana (bisa pakai adapter list biasa)
-                    val adapter = HutangAdapter(listHutang) { transaksi ->
-                        val intent = Intent(this@HutangActivity, DetailHutangActivity::class.java)
+                    val adapter = BayarNantiAdapter(listBayarNanti) { transaksi ->
+                        val intent = Intent(this@BayarNantiActivity, DetailBayarNantiActivity::class.java)
                         intent.putExtra("ID", transaksi.id)
                         startActivity(intent)
                     }
-                    binding.rvHutang.adapter = adapter
+                    binding.rvBayarNanti.adapter = adapter
                 }
                 override fun onCancelled(error: DatabaseError) {}
             })

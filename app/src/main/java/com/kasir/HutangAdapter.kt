@@ -5,10 +5,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.kasir.databinding.ItemHutangBinding
 
-class HutangAdapter(
-    private val listHutang: List<TransactionModel>,
+class BayarNantiAdapter(
+    private val listBayarNanti: List<TransactionModel>,
     private val onClick: (TransactionModel) -> Unit
-) : RecyclerView.Adapter<HutangAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<BayarNantiAdapter.ViewHolder>() {
 
     inner class ViewHolder(val binding: ItemHutangBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -18,11 +18,11 @@ class HutangAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val transaksi = listHutang[position]
+        val transaksi = listBayarNanti[position]
 
         with(holder.binding) {
             tvNamaPembeli.text = transaksi.namaPembeli
-            tvTotalHutang.text = "Total Hutang: ${FormatterUtil.formatRupiah(transaksi.totalHarga)}"
+            tvTotalBayarNanti.text = "Total Bayar Nanti: ${FormatterUtil.formatRupiah(transaksi.totalHarga)}"
         }
 
         holder.itemView.setOnClickListener {
@@ -30,5 +30,5 @@ class HutangAdapter(
         }
     }
 
-    override fun getItemCount(): Int = listHutang.size
+    override fun getItemCount(): Int = listBayarNanti.size
 }

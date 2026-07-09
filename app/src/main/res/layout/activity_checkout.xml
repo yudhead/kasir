@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -101,8 +102,9 @@
                     android:id="@+id/etNamaPembeli"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
+                    android:alpha="0.8"
                     android:background="@drawable/bg_edittext_rounded"
-                    android:hint="Nama Pembeli (Wajib jika Hutang)"
+                    android:hint="Nama Pembeli (Wajib jika Bayar Nanti)"
                     android:paddingHorizontal="16dp"
                     android:textColor="@color/text_primary"
                     android:textColorHint="@color/text_light"
@@ -152,15 +154,15 @@
                         android:id="@+id/rbTransfer"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="  Transfer Bank"
+                        android:text="  Transfer Bank /QRIS"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp" />
 
                     <RadioButton
-                        android:id="@+id/rbHutang"
+                        android:id="@+id/rbBayarNanti"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="  Hutang (Bayar Nanti)"
+                        android:text="  Bayar Nanti"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp" />
                 </RadioGroup>
@@ -173,7 +175,7 @@
             android:layout_marginBottom="24dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="@android:color/white">
+            app:cardBackgroundColor="@color/surface">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -212,8 +214,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:src="@android:drawable/ic_menu_camera"
-                        android:tint="#BDC3C7"/>
+                        android:src="@android:drawable/ic_menu_camera" />
                 </androidx.cardview.widget.CardView>
 
                 <Button
@@ -223,7 +224,7 @@
                     android:backgroundTint="#3498DB"
                     android:textColor="@android:color/white"
                     android:textAllCaps="false"
-                    android:text="Upload Foto" />
+                    android:text="Ambil Foto" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

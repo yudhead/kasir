@@ -31,6 +31,12 @@ class GudangAdapter(private val listBarang: List<Product>) : RecyclerView.Adapte
                 .placeholder(android.R.drawable.ic_menu_gallery)
                 .error(android.R.drawable.ic_menu_report_image)
                 .into(ivItemFoto)
+
+            ivItemFoto.setOnClickListener {
+                if (product.imageUrl.isNotEmpty()) {
+                    ImageDialogUtil.showImageDialog(context, product.imageUrl)
+                }
+            }
         }
 
         holder.itemView.setOnClickListener {

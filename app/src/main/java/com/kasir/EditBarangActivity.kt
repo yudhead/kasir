@@ -44,6 +44,13 @@ class EditBarangActivity : AppCompatActivity() {
             pilihFotoLauncher.launch("image/*")
         }
 
+        binding.ivEditFotoBarang.setOnClickListener {
+            val source = imageUri ?: if (oldImagePath.isNotEmpty()) oldImagePath else null
+            if (source != null) {
+                ImageDialogUtil.showImageDialog(this, source)
+            }
+        }
+
         binding.btnUpdateBarang.setOnClickListener {
             val namaBaru = binding.etEditNamaBarang.text.toString().trim()
             val kategoriBaru = binding.etEditKategori.text.toString().trim()

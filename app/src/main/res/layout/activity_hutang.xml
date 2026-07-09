@@ -3,10 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:fitsSystemWindows="true">
 
     <LinearLayout
-        android:id="@+id/headerHutang"
+        android:id="@+id/headerBayarNanti"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/surface"
@@ -15,22 +16,22 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/tvJudulHutang"
+            android:id="@+id/tvJudulBayarNanti"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Daftar Hutang (Belum Lunas)"
+            android:text="Daftar Bayar Nanti (Belum Lunas)"
             android:textColor="@color/text_primary"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvHutang"
+        android:id="@+id/rvBayarNanti"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:paddingTop="8dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/headerHutang"
+        app:layout_constraintTop_toBottomOf="@id/headerBayarNanti"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

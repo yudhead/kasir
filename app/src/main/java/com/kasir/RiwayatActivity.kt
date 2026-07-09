@@ -159,7 +159,7 @@ class RiwayatActivity : AppCompatActivity() {
             "$date - ${t.namaPembeli} - ${FormatterUtil.formatRupiah(t.totalHarga)}"
         }
 
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, displayList)
+        val adapter = ArrayAdapter(this, R.layout.item_riwayat_list, displayList)
         binding.lvRiwayat.adapter = adapter
 
         binding.lvRiwayat.setOnItemClickListener { _, _, position, _ ->

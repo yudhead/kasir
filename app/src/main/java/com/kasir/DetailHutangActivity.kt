@@ -9,7 +9,7 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.kasir.databinding.ActivityDetailHutangBinding
 
-class DetailHutangActivity : AppCompatActivity() {
+class DetailBayarNantiActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityDetailHutangBinding
     private val db = Firebase.database.reference
@@ -87,7 +87,7 @@ class DetailHutangActivity : AppCompatActivity() {
 
                 Toast.makeText(
                     this,
-                    "Hutang berhasil dihapus",
+                    "Bayar Nanti berhasil dihapus",
                     Toast.LENGTH_SHORT
                 ).show()
 
@@ -190,13 +190,13 @@ class DetailHutangActivity : AppCompatActivity() {
         }
 
         //-------------------------------
-        // HAPUS HUTANG
+        // HAPUS BAYAR NANTI
         //-------------------------------
 
         binding.btnHapus.setOnClickListener {
 
             AlertDialog.Builder(this)
-                .setTitle("Hapus Hutang")
+                .setTitle("Hapus Bayar Nanti")
                 .setMessage("Yakin ingin menghapus transaksi ini?")
                 .setPositiveButton("Ya") { _, _ ->
 

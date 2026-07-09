@@ -55,7 +55,7 @@ class KasirActivity : AppCompatActivity() {
             }
             
             if (CartManager.mode == CartManager.MODE_EDIT) {
-                simpanPerubahanHutang()
+                simpanPerubahanBayarNanti()
             } else {
                 startActivity(Intent(this, CheckoutActivity::class.java))
             }
@@ -140,13 +140,13 @@ class KasirActivity : AppCompatActivity() {
                 binding.tvDaftarProdukTitle.text = "Daftar Produk"
             }
             CartManager.MODE_EDIT -> {
-                binding.tvKasirTitle.text = "Edit Barang Hutang"
+                binding.tvKasirTitle.text = "Edit Barang Bayar Nanti"
                 binding.rvKeranjang.visibility = android.view.View.VISIBLE
                 binding.tvDaftarProdukTitle.text = "Tambah Barang Lain"
                 binding.btnLanjutCheckout.text = "Simpan Perubahan"
             }
             CartManager.MODE_PELUNASAN -> {
-                binding.tvKasirTitle.text = "Pelunasan Hutang"
+                binding.tvKasirTitle.text = "Pelunasan Bayar Nanti"
                 binding.rvKeranjang.visibility = android.view.View.VISIBLE
                 binding.tvDaftarProdukTitle.visibility = android.view.View.GONE
                 binding.tilSearchKasir.visibility = android.view.View.GONE
@@ -216,7 +216,7 @@ class KasirActivity : AppCompatActivity() {
         }
     }
 
-    private fun simpanPerubahanHutang() {
+    private fun simpanPerubahanBayarNanti() {
         binding.btnLanjutCheckout.isEnabled = false
         val db = Firebase.database.reference
         
@@ -275,7 +275,7 @@ class KasirActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 Toast.makeText(this, "Berhasil diupdate!", Toast.LENGTH_SHORT).show()
                 CartManager.bersihkanKeranjang()
-                val intent = Intent(this, HutangActivity::class.java)
+                val intent = Intent(this, BayarNantiActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
                 startActivity(intent)
                 finish()

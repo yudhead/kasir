@@ -28,14 +28,17 @@ class CheckoutActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCheckoutBinding
     private lateinit var database: DatabaseReference
     private var imageUri: Uri? = null
+    private var tempCameraUri: Uri? = null
 
     // Variabel untuk menyimpan transaksi sementara sebelum dicetak
     private var transaksiTerakhir: TransactionModel? = null
 
-    private val pilihFotoLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            imageUri = uri
-            binding.ivBuktiBayar.setImageURI(uri)
+    // Launcher Kamera
+    private val kameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success && tempCameraUri != null) {
+            imageUri = tempCameraUri
+            binding.ivBuktiBayar.setImageURI(imageUri)
+            binding.ivBuktiBayar.imageTintList = null // Hapus tint agar foto asli kelihatan
         }
     }
 
@@ -61,14 +64,20 @@ class CheckoutActivity : AppCompatActivity() {
         }
 
         binding.btnUploadBukti.setOnClickListener {
-            pilihFotoLauncher.launch("image/*")
+            cekIzinKamera()
+        }
+
+        binding.ivBuktiBayar.setOnClickListener {
+            if (imageUri != null) {
+                ImageDialogUtil.showImageDialog(this, imageUri)
+            }
         }
 
         binding.btnProsesBayar.setOnClickListener {
             val metode = when {
                 binding.rbCash.isChecked -> "Cash"
                 binding.rbTransfer.isChecked -> "Transfer"
-                else -> "Hutang"
+                else -> "Bayar Nanti"
             }
 
             if (binding.rbTransfer.isChecked && imageUri == null) {
@@ -76,15 +85,25 @@ class CheckoutActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (binding.rbHutang.isChecked && binding.etNamaPembeli.text.toString().isEmpty()) {
-                Toast.makeText(this, "Nama Pembeli wajib diisi untuk Hutang!", Toast.LENGTH_SHORT).show()
+            if (binding.rbBayarNanti.isChecked && binding.etNamaPembeli.text.toString().isEmpty()) {
+                Toast.makeText(this, "Nama Pembeli wajib diisi untuk Bayar Nanti!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            prosesSimpanTransaksi(metode)
+            AlertDialog.Builder(this)
+                .setTitle("Konfirmasi Pembayaran")
+                .setMessage("Apakah Anda yakin ingin menyelesaikan pembayaran ini?")
+                .setPositiveButton("Ya, Selesaikan") { _, _ ->
+                    prosesSimpanTransaksi(metode)
+                }
+                .setNegativeButton("Batal", null)
+                .show()
         }
     }
 
+    // ==========================================
+    // LOGIKA SIMPAN TRANSAKSI & AMBIL NOMOR STRUK FIREBASE
+    // ==========================================
     private fun prosesSimpanTransaksi(metode: String) {
         binding.btnProsesBayar.isEnabled = false
         binding.btnProsesBayar.text = "Memproses..."
@@ -94,37 +113,65 @@ class CheckoutActivity : AppCompatActivity() {
             buktiPath = simpanFotoKeInternal(imageUri!!) ?: ""
         }
 
-        val transactionId = if (CartManager.mode == CartManager.MODE_PELUNASAN) CartManager.transaksiId else database.child("transactions").push().key ?: ""
-        val status = if (binding.rbHutang.isChecked) "BELUM_BAYAR" else "LUNAS"
-        val nama = binding.etNamaPembeli.text.toString()
+        // 1. MENGAMBIL NOMOR TERAKHIR DARI FIREBASE
+        database.child("settings").child("last_receipt_number").get().addOnSuccessListener { snapshot ->
+            var lastNumber = snapshot.getValue(Int::class.java) ?: 0
+            lastNumber++ // Tambah 1
 
-        val transaksiBaru = TransactionModel(
-            id = transactionId,
-            namaPembeli = nama,
-            totalHarga = CartManager.totalHarga,
-            timestamp = System.currentTimeMillis(),
-            items = CartManager.keranjang.toList(), // Copy list
-            statusBayar = status,
-            metodePembayaran = metode,
-            buktiPembayaranPath = buktiPath
-        )
+            if (lastNumber > 9999) {
+                lastNumber = 1 // Reset jika lebih dari 9999
+            }
 
-        // Simpan transaksi
-        database.child("transactions").child(transactionId).setValue(transaksiBaru)
-            .addOnSuccessListener {
-                if (status == "LUNAS") {
-                    potongStokGudang()
+            // Format jadi 4 digit (contoh: 0045)
+            val nomorFormat = String.format("%04d", lastNumber)
+
+            // Update nomor terbaru ke Firebase agar HP lain tahu
+            database.child("settings").child("last_receipt_number").setValue(lastNumber)
+
+            // 2. BUAT TANGGAL SAAT INI
+            val sdf = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+            val tanggalSaatIni = sdf.format(java.util.Date())
+
+            // 3. PROSES SIMPAN TRANSAKSI
+            val transactionId = if (CartManager.mode == CartManager.MODE_PELUNASAN) CartManager.transaksiId else database.child("transactions").push().key ?: ""
+            val status = if (binding.rbBayarNanti.isChecked) "BELUM_BAYAR" else "LUNAS"
+            val nama = binding.etNamaPembeli.text.toString()
+
+            val transaksiBaru = TransactionModel(
+                id = transactionId,
+                namaPembeli = nama,
+                totalHarga = CartManager.totalHarga,
+                timestamp = System.currentTimeMillis(),
+                items = CartManager.keranjang.toList(),
+                statusBayar = status,
+                metodePembayaran = metode,
+                buktiPembayaranPath = buktiPath,
+                nomorStruk = nomorFormat,
+                tanggalWaktu = tanggalSaatIni
+            )
+
+            // Simpan transaksi ke Firebase
+            database.child("transactions").child(transactionId).setValue(transaksiBaru)
+                .addOnSuccessListener {
+                    if (status == "LUNAS") {
+                        potongStokGudang()
+                    }
+                    transaksiTerakhir = transaksiBaru
+                    tampilkanDialogCetakStruk()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(this, "Gagal memproses transaksi", Toast.LENGTH_SHORT).show()
+                    binding.btnProsesBayar.isEnabled = true
+                    binding.btnProsesBayar.text = "Selesaikan Pembayaran"
                 }
 
-                transaksiTerakhir = transaksiBaru
-                tampilkanDialogCetakStruk() // MUNCULKAN DIALOG CETAK
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Gagal memproses transaksi", Toast.LENGTH_SHORT).show()
-                binding.btnProsesBayar.isEnabled = true
-                binding.btnProsesBayar.text = "Selesaikan Pembayaran"
-            }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Gagal mengambil nomor urut. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
+            binding.btnProsesBayar.isEnabled = true
+            binding.btnProsesBayar.text = "Selesaikan Pembayaran"
+        }
     }
+
 
     // ==========================================
     // LOGIKA CETAK STRUK BLUETOOTH
@@ -145,7 +192,6 @@ class CheckoutActivity : AppCompatActivity() {
     }
 
     private fun cekIzinBluetoothDanCetak() {
-        // Khusus Android 12+, butuh izin BLUETOOTH_CONNECT saat runtime
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 101)
@@ -165,14 +211,12 @@ class CheckoutActivity : AppCompatActivity() {
             return
         }
         if (!bluetoothAdapter.isEnabled) {
-            // Jika Bluetooth mati, jangan langsung ditutup! Munculkan dialog coba lagi
             dialogGagalCetak("Bluetooth belum aktif. Aktifkan di pengaturan HP Anda lalu coba lagi.")
             return
         }
 
         val pairedDevices = bluetoothAdapter.bondedDevices
         if (pairedDevices.isEmpty()) {
-            // Jika belum ada printer, beri kesempatan user untuk pairing tanpa kehilangan transaksi
             dialogGagalCetak("Belum ada printer tersimpan. Pairing printer di Pengaturan Bluetooth HP Anda lalu coba lagi.")
             return
         }
@@ -191,13 +235,12 @@ class CheckoutActivity : AppCompatActivity() {
             .show()
     }
 
-    // FUNGSI BARU: Untuk menahan layar agar tidak langsung pindah saat gagal
     private fun dialogGagalCetak(pesan: String) {
         AlertDialog.Builder(this)
             .setTitle("Gagal Mencetak")
             .setMessage(pesan)
             .setPositiveButton("Coba Lagi") { _, _ ->
-                cekIzinBluetoothDanCetak() // Ulangi proses
+                cekIzinBluetoothDanCetak()
             }
             .setNegativeButton("Selesai (Tanpa Struk)") { _, _ ->
                 selesaiDanTutup()
@@ -210,7 +253,6 @@ class CheckoutActivity : AppCompatActivity() {
     private fun kirimDataKePrinter(device: BluetoothDevice) {
         val t = transaksiTerakhir ?: return
 
-        // Ubah tombol sementara saat proses print
         runOnUiThread {
             Toast.makeText(this, "Menyambungkan ke printer...", Toast.LENGTH_SHORT).show()
         }
@@ -228,6 +270,9 @@ class CheckoutActivity : AppCompatActivity() {
                 struk.append("\n")
                 struk.append("           JAYATRI KEDIRI          \n")
                 struk.append("===============================\n")
+
+                struk.append("Tanggal   : ${t.tanggalWaktu}\n")
+                struk.append("No. Struk : ${t.nomorStruk}\n")
                 struk.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
                 struk.append("Metode    : ${t.metodePembayaran}\n")
                 struk.append("Status    : ${t.statusBayar}\n")
@@ -260,7 +305,6 @@ class CheckoutActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                // JIKA GAGAL: Jangan panggil selesaiDanTutup(), melainkan panggil dialogGagalCetak
                 runOnUiThread {
                     dialogGagalCetak("Gagal terhubung ke printer. Pastikan printer menyala, jarak dekat, dan tidak sedang dipakai perangkat lain.")
                 }
@@ -270,27 +314,49 @@ class CheckoutActivity : AppCompatActivity() {
 
     // ==========================================
 
+    private fun cekIzinKamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), 100)
+        } else {
+            bukaKamera()
+        }
+    }
+
+    private fun bukaKamera() {
+        val values = android.content.ContentValues()
+        values.put(android.provider.MediaStore.Images.Media.TITLE, "Bukti Transfer")
+        tempCameraUri = contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        tempCameraUri?.let {
+            kameraLauncher.launch(it)
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 101 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            mulaiPilihPrinter() // Lanjut pilih printer setelah diizinkan
+        if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            bukaKamera()
+        } else if (requestCode == 101 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            mulaiPilihPrinter()
         } else {
-            Toast.makeText(this, "Izin Bluetooth ditolak", Toast.LENGTH_SHORT).show()
-            selesaiDanTutup()
+            if (requestCode == 101) {
+                Toast.makeText(this, "Izin Bluetooth ditolak", Toast.LENGTH_SHORT).show()
+                selesaiDanTutup()
+            } else {
+                Toast.makeText(this, "Izin Kamera ditolak", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun selesaiDanTutup() {
         CartManager.bersihkanKeranjang()
         if (CartManager.mode == CartManager.MODE_PELUNASAN) {
-            val intent = Intent(this, HutangActivity::class.java)
+            val intent = Intent(this, BayarNantiActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
         }
         finish()
     }
 
-    // ... (Fungsi potongStokGudang dan simpanFotoKeInternal Anda tetap biarkan sama)
     private fun potongStokGudang() {
         for (item in CartManager.keranjang) {
             val produkId = item.product?.id

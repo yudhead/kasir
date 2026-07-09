@@ -43,6 +43,14 @@ class DetailRiwayatActivity : AppCompatActivity() {
         binding.btnCetakUlangStruk.setOnClickListener {
             cekIzinBluetoothDanCetak()
         }
+
+        binding.ivDetailBukti.setOnClickListener {
+            transaksi?.let { t ->
+                if (t.buktiPembayaranPath.isNotEmpty()) {
+                    ImageDialogUtil.showImageDialog(this, t.buktiPembayaranPath)
+                }
+            }
+        }
     }
 
     private fun tampilkanData(t: TransactionModel) {

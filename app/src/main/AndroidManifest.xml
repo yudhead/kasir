@@ -67,11 +67,11 @@
             android:windowSoftInputMode="adjustPan"
             android:exported="false" />
         <activity
-            android:name=".HutangActivity"
+            android:name=".BayarNantiActivity"
             android:windowSoftInputMode="adjustPan"
             android:exported="false" />
         <activity
-            android:name=".DetailHutangActivity"
+            android:name=".DetailBayarNantiActivity"
             android:windowSoftInputMode="adjustPan"
             android:exported="false" />
     </application>

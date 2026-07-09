@@ -8,5 +8,7 @@ data class TransactionModel(
     val items: List<CartItem> = emptyList(),
     val statusBayar: String = "LUNAS", // "LUNAS" atau "BELUM_BAYAR"
     val metodePembayaran: String = "",
-    val buktiPembayaranPath: String = ""
+    val buktiPembayaranPath: String = "",
+    var nomorStruk: String = "",
+    var tanggalWaktu: String = ""
 )

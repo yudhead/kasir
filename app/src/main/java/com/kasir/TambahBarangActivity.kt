@@ -39,6 +39,7 @@ class TambahBarangActivity : AppCompatActivity() {
         if (success && tempCameraUri != null) {
             imageUri = tempCameraUri
             binding.ivFotoBarang.setImageURI(imageUri)
+            binding.ivFotoBarang.imageTintList = null
         }
     }
 
@@ -59,6 +60,12 @@ class TambahBarangActivity : AppCompatActivity() {
                 .setItems(options) { _, which ->
                     if (which == 0) cekIzinKamera() else pilihFotoLauncher.launch("image/*")
                 }.show()
+        }
+
+        binding.ivFotoBarang.setOnClickListener {
+            if (imageUri != null) {
+                ImageDialogUtil.showImageDialog(this, imageUri)
+            }
         }
 
         binding.btnSimpanBarang.setOnClickListener {

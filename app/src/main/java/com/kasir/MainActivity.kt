@@ -48,8 +48,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, RiwayatActivity::class.java))
         }
 
-        binding.cardHutang.setOnClickListener {
-            startActivity(Intent(this, HutangActivity::class.java))
+        binding.cardBayarNanti.setOnClickListener {
+            startActivity(Intent(this, BayarNantiActivity::class.java))
         }
 
         binding.btnTambahBarang.setOnClickListener {
