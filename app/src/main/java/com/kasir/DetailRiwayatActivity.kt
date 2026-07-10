@@ -54,14 +54,21 @@ class DetailRiwayatActivity : AppCompatActivity() {
     }
 
     private fun tampilkanData(t: TransactionModel) {
-        val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
-        val dateStr = sdf.format(java.util.Date(t.timestamp))
-        
-        binding.tvDetailInfo.text = "Pembeli: ${t.namaPembeli}\nTanggal: $dateStr\nMetode: ${t.metodePembayaran}\nStatus: ${t.statusBayar}\n\nTOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}"
+        // Menampilkan Nomor Struk dan Tanggal dari Firebase ke Layar HP
+        binding.tvDetailInfo.text = """
+            No. Struk: ${t.nomorStruk}
+            Pembeli: ${t.namaPembeli}
+            Tanggal: ${t.tanggalWaktu}
+            Metode: ${t.metodePembayaran}
+            Status: ${t.statusBayar}
+            
+            TOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}
+        """.trimIndent()
 
         var itemsText = ""
         for (item in t.items) {
-            val unitPrice = item.product?.hargaJual ?: 0
+            // Mengambil harga dari property model (antisipasi jika namanya beda)
+            val unitPrice = item.product?.harga ?: (item.product?.hargaJual ?: 0)
             val subTotal = unitPrice * item.quantity
             itemsText += "${item.product?.namaBarang}\n"
             itemsText += "  ${item.quantity} x ${FormatterUtil.formatRupiah(unitPrice)} = ${FormatterUtil.formatRupiah(subTotal)}\n\n"
@@ -130,53 +137,74 @@ class DetailRiwayatActivity : AppCompatActivity() {
     private fun kirimDataKePrinter(device: BluetoothDevice) {
         val t = transaksi ?: return
 
-        Toast.makeText(this, "Menyambungkan ke printer...", Toast.LENGTH_SHORT).show()
+        runOnUiThread {
+            Toast.makeText(this, "Menyambungkan ke printer...", Toast.LENGTH_SHORT).show()
+        }
 
         Thread {
             try {
+                // 1. SUSUN TEKS & TAMPILKAN LOGCAT (Sama persis dengan Checkout)
+                val struk = java.lang.StringBuilder()
+                struk.append("\n")
+                struk.append("         JAYATRI KEDIRI         \n")
+                struk.append("      IG: @jayatrimini_4wd      \n")
+                struk.append("    TikTok: @JAYATRI_MINI4WD    \n")
+                struk.append("       WA: 0823-3311-1905       \n")
+                struk.append("================================\n")
+
+                struk.append("Tanggal   : ${t.tanggalWaktu}\n")
+                struk.append("No. Struk : ${t.nomorStruk}\n")
+                struk.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
+                struk.append("Metode    : ${t.metodePembayaran}\n")
+                struk.append("Status    : ${t.statusBayar}\n")
+                struk.append("--------------------------------\n")
+
+                for (item in t.items) {
+                    val namaBarang = item.product?.namaBarang ?: ""
+                    val qty = item.quantity
+                    val harga = item.product?.harga ?: (item.product?.hargaJual ?: 0)
+                    val subtotal = qty * harga
+
+                    struk.append("$namaBarang\n")
+                    struk.append("    $qty x Rp $harga = Rp $subtotal\n")
+                }
+
+                struk.append("--------------------------------\n")
+                struk.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
+                struk.append("================================\n")
+                struk.append("         (CETAK ULANG)          \n") // Tanda Cetak Ulang
+                struk.append("  Terima Kasih Atas Kunjungan   \n")
+                struk.append("           Anda!                \n")
+                struk.append("\n\n\n")
+
+                // Tampilkan ke Logcat untuk testing
+                android.util.Log.d("CEK_STRUK_KASIR", "\n" + struk.toString())
+
+                // 2. KONEKSI BLUETOOTH
                 val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
                 val socket = device.createRfcommSocketToServiceRecord(uuid)
                 socket.connect()
 
                 val outputStream = socket.outputStream
 
-                val struk = java.lang.StringBuilder()
-                struk.append("\n")
-                struk.append("           JAYATRI KEDIRI          \n")
-                struk.append("===============================\n")
-                struk.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
-                struk.append("Metode    : ${t.metodePembayaran}\n")
-                struk.append("Status    : ${t.statusBayar}\n")
-                struk.append("-------------------------------\n")
+                // Kode bangunkan printer
+                val initPrinter = byteArrayOf(0x1B, 0x40)
+                outputStream.write(initPrinter)
 
-                for (item in t.items) {
-                    val namaBarang = item.product?.namaBarang ?: ""
-                    val qty = item.quantity
-                    val harga = item.product?.hargaJual ?: 0
-                    val subtotal = qty * harga
+                // Kirim teks dengan format ASCII
+                outputStream.write(struk.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
 
-                    struk.append("$namaBarang\n")
-                    struk.append("   $qty x ${FormatterUtil.formatRupiah(harga)} = ${FormatterUtil.formatRupiah(subtotal)}\n")
-                }
-
-                struk.append("-------------------------------\n")
-                struk.append("TOTAL : ${FormatterUtil.formatRupiah(t.totalHarga)}\n")
-                struk.append("===============================\n")
-                struk.append("          Terima Kasih         \n")
-                struk.append("\n\n\n")
-
-                outputStream.write(struk.toString().toByteArray())
                 outputStream.flush()
                 socket.close()
 
                 runOnUiThread {
-                    Toast.makeText(this, "Berhasil mencetak ulang struk!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailRiwayatActivity, "Berhasil mencetak ulang struk!", Toast.LENGTH_SHORT).show()
                 }
 
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
-                    Toast.makeText(this, "Gagal terhubung ke printer.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@DetailRiwayatActivity, "Gagal mencetak. Pastikan printer menyala.", Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
