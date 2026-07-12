@@ -33,8 +33,13 @@ class KeranjangAdapter(
             etQuantity.setText(item.quantity.toString())
 
             btnTambah.setOnClickListener {
-                val stock = item.product?.stok ?: 0
-                if (item.quantity < stock) {
+                val stockInWarehouse = item.product?.stok ?: 0
+                
+                // Jika dalam mode edit bayar nanti, kita hitung selisih dari quantity lama
+                val oldQty = CartManager.oldItems.find { it.product?.id == item.product?.id }?.quantity ?: 0
+                val totalAvailableStock = stockInWarehouse + oldQty
+                
+                if (item.quantity < totalAvailableStock) {
                     item.quantity++
                     etQuantity.setText(item.quantity.toString())
                     onQuantityChanged()
@@ -65,16 +70,18 @@ class KeranjangAdapter(
                     val input = etQuantity.text.toString()
                     if (input.isNotEmpty()) {
                         val newQty = input.toIntOrNull() ?: item.quantity
-                        val stock = item.product?.stok ?: 0
+                        val stockInWarehouse = item.product?.stok ?: 0
+                        
+                        // Hitung total stok yang bisa digunakan (stok gudang + yang sudah diambil sebelumnya)
+                        val oldQty = CartManager.oldItems.find { it.product?.id == item.product?.id }?.quantity ?: 0
+                        val totalAvailableStock = stockInWarehouse + oldQty
                         
                         when {
-                            newQty > stock -> {
-                                android.widget.Toast.makeText(holder.itemView.context, "Stok hanya tersedia $stock", android.widget.Toast.LENGTH_SHORT).show()
-                                item.quantity = stock
+                            newQty > totalAvailableStock -> {
+                                android.widget.Toast.makeText(holder.itemView.context, "Stok hanya tersedia $totalAvailableStock", android.widget.Toast.LENGTH_SHORT).show()
+                                item.quantity = totalAvailableStock
                             }
                             newQty <= 0 -> {
-                                // Jika input 0 atau kurang, kita kembalikan ke 1 atau hapus?
-                                // Biasanya manual input minimal 1 agar tidak membingungkan
                                 item.quantity = 1
                             }
                             else -> {
@@ -84,7 +91,6 @@ class KeranjangAdapter(
                         etQuantity.setText(item.quantity.toString())
                         onQuantityChanged()
                     } else {
-                        // Jika kosong saat kehilangan fokus, kembalikan ke quantity lama
                         etQuantity.setText(item.quantity.toString())
                     }
                 }

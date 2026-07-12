@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.kasir" />
+                  <option name="mobileSdkAppId" value="1:321891695640:android:a919bcb3179da2ffb3176d" />
+                  <option name="projectId" value="kasir-b6641" />
+                  <option name="projectNumber" value="321891695640" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

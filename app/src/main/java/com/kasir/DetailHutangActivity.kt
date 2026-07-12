@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.kasir.databinding.ActivityDetailHutangBinding
@@ -29,105 +30,47 @@ class DetailBayarNantiActivity : AppCompatActivity() {
     }
 
     private fun kembalikanStok(t: TransactionModel) {
-
-        if (t.items.isEmpty()) {
-
-            hapusTransaksi(t.id)
-
-            return
-
-        }
-
-        var selesai = 0
-
-        t.items.forEach { item ->
-
-            val produkId = item.product?.id ?: return@forEach
-
-            db.child("products")
-                .child(produkId)
-                .child("stok")
-                .get()
-                .addOnSuccessListener { snapshot ->
-
-                    val stokSekarang =
-                        snapshot.getValue(Int::class.java) ?: 0
-
-                    val stokBaru =
-                        stokSekarang + item.quantity
-
-                    db.child("products")
-                        .child(produkId)
-                        .child("stok")
-                        .setValue(stokBaru)
-                        .addOnSuccessListener {
-
-                            selesai++
-
-                            if (selesai == t.items.size) {
-
-                                hapusTransaksi(t.id)
-
-                            }
-
-                        }
-
-                }
-
-        }
-
-    }
-
-    private fun hapusTransaksi(id: String) {
-
+        // Soft delete: tandai sebagai dihapus agar tetap ada di riwayat
+        // Gunakan key 'deleted' untuk menghindari masalah prefix 'is'
+        val update = mapOf("deleted" to true)
         db.child("transactions")
-            .child(id)
-            .removeValue()
+            .child(transaksiId) // Gunakan ID dari intent yang pasti benar
+            .updateChildren(update)
             .addOnSuccessListener {
-
-                Toast.makeText(
-                    this,
-                    "Bayar Nanti berhasil dihapus",
-                    Toast.LENGTH_SHORT
-                ).show()
-
+                Toast.makeText(this, "Berhasil dihapus dari daftar aktif.", Toast.LENGTH_SHORT).show()
                 finish()
-
             }
             .addOnFailureListener {
-
-                Toast.makeText(
-                    this,
-                    "Gagal menghapus",
-                    Toast.LENGTH_SHORT
-                ).show()
-
+                Toast.makeText(this, "Gagal menghapus.", Toast.LENGTH_SHORT).show()
             }
-
     }
 
-
     private fun loadData() {
-
         db.child("transactions")
             .child(transaksiId)
             .get()
             .addOnSuccessListener { snapshot ->
-
-                transaksi =
-                    snapshot.getValue(TransactionModel::class.java)
-
+                transaksi = snapshot.getValue(TransactionModel::class.java)
                 transaksi?.let {
-
-                    tampilkanData(it)
-
+                    if (it.deleted) {
+                        tampilkanWarningDihapus(it)
+                    } else {
+                        tampilkanData(it)
+                    }
                 }
-
             }
+    }
 
+    private fun tampilkanWarningDihapus(t: TransactionModel) {
+        // Jika dibuka lewat sini (DetailBayarNanti), langsung arahkan ke riwayat saja karena ini daftar aktif
+        Toast.makeText(this, "Data ini sudah dihapus. Silakan cek di menu Riwayat.", Toast.LENGTH_SHORT).show()
+        finish()
     }
 
     private fun tampilkanData(t: TransactionModel) {
+        binding.tvDetailInfo.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+        binding.btnHapus.text = "Hapus Data Bayar Nanti"
+        binding.btnHapus.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#E74C3C"))
 
         binding.tvDetailInfo.text =
             "Pembeli : ${t.namaPembeli}\n\nTotal : ${FormatterUtil.formatRupiah(t.totalHarga)}"
@@ -149,24 +92,16 @@ class DetailBayarNantiActivity : AppCompatActivity() {
         //-------------------------------
 
         binding.btnUpdateBarang.setOnClickListener {
-
             CartManager.bersihkanKeranjang()
-
-            CartManager.oldItems.clear()
-            CartManager.oldItems.addAll(t.items)
-
-            CartManager.keranjang.addAll(t.items)
-
+            // Gunakan .map { it.copy() } agar tidak berbagi referensi objek yang sama
+            CartManager.oldItems.addAll(t.items.map { it.copy() })
+            CartManager.keranjang.addAll(t.items.map { it.copy() })
             CartManager.totalHarga = t.totalHarga
-
             CartManager.transaksiId = t.id
-
             CartManager.namaPembeli = t.namaPembeli
-
+            CartManager.nomorStruk = t.nomorStruk
             CartManager.mode = CartManager.MODE_EDIT
-
             startActivity(Intent(this, KasirActivity::class.java))
-
         }
 
         //-------------------------------
@@ -177,6 +112,7 @@ class DetailBayarNantiActivity : AppCompatActivity() {
             CartManager.mode = CartManager.MODE_PELUNASAN
             CartManager.transaksiId = t.id
             CartManager.namaPembeli = t.namaPembeli
+            CartManager.nomorStruk = t.nomorStruk
             CartManager.keranjang.clear()
             CartManager.keranjang.addAll(t.items)
             CartManager.totalHarga = t.totalHarga
@@ -193,20 +129,16 @@ class DetailBayarNantiActivity : AppCompatActivity() {
         // HAPUS BAYAR NANTI
         //-------------------------------
 
+        binding.btnHapus.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#E74C3C"))
         binding.btnHapus.setOnClickListener {
-
             AlertDialog.Builder(this)
                 .setTitle("Hapus Bayar Nanti")
                 .setMessage("Yakin ingin menghapus transaksi ini?")
                 .setPositiveButton("Ya") { _, _ ->
-
                     kembalikanStok(t)
-
                 }
                 .setNegativeButton("Batal", null)
                 .show()
-
         }
-
     }
 }

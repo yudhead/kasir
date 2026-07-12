@@ -10,5 +10,6 @@ data class TransactionModel(
     val metodePembayaran: String = "",
     val buktiPembayaranPath: String = "",
     var nomorStruk: String = "",
-    var tanggalWaktu: String = ""
+    var tanggalWaktu: String = "",
+    var deleted: Boolean = false
 )

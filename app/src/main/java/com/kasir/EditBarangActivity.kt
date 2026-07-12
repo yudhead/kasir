@@ -2,6 +2,7 @@ package com.kasir
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -39,6 +40,7 @@ class EditBarangActivity : AppCompatActivity() {
         productId = intent.getStringExtra("EXTRA_ID") ?: ""
         
         loadProductData()
+        loadKategori()
 
         binding.btnEditPilihFoto.setOnClickListener {
             pilihFotoLauncher.launch("image/*")
@@ -82,7 +84,7 @@ class EditBarangActivity : AppCompatActivity() {
             val product = snapshot.getValue(Product::class.java)
             if (product != null) {
                 binding.etEditNamaBarang.setText(product.namaBarang)
-                binding.etEditKategori.setText(product.kategori)
+                binding.etEditKategori.setText(product.kategori, false)
                 
                 // Jika nilai 0, biarkan kosong agar hint "0" muncul (abu-abu)
                 binding.etEditHargaBeli.setText(if (product.hargaBeli == 0) "" else product.hargaBeli.toString())
@@ -95,6 +97,30 @@ class EditBarangActivity : AppCompatActivity() {
                     .load(oldImagePath)
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(binding.ivEditFotoBarang)
+            }
+        }
+    }
+
+    private fun loadKategori() {
+        database.child("products").get().addOnSuccessListener { snapshot ->
+            val kategoriSet = mutableSetOf<String>()
+            for (data in snapshot.children) {
+                val kat = data.child("kategori").getValue(String::class.java)
+                if (!kat.isNullOrEmpty()) {
+                    kategoriSet.add(kat)
+                }
+            }
+            val kategoriList = kategoriSet.toList()
+            val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, kategoriList)
+            binding.etEditKategori.setAdapter(adapter)
+
+            binding.etEditKategori.setOnClickListener {
+                binding.etEditKategori.showDropDown()
+            }
+            binding.etEditKategori.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    binding.etEditKategori.showDropDown()
+                }
             }
         }
     }

@@ -33,6 +33,8 @@ class RiwayatActivity : AppCompatActivity() {
     
     private var startDate: Long? = null
     private var endDate: Long? = null
+    private var selectedMetode = "Semua"
+    private var presetFilter = "Semua"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,11 +42,32 @@ class RiwayatActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupCalendarFilter()
+        setupPresetFilters()
         setupSearch()
+        setupMetodeFilter()
         loadData()
 
         binding.btnDownloadPdf.setOnClickListener {
             generatePdf()
+        }
+    }
+
+    private fun setupPresetFilters() {
+        binding.chipGroupFilter.setOnCheckedStateChangeListener { group, checkedIds ->
+            presetFilter = when (checkedIds.firstOrNull()) {
+                binding.chipMingguIni.id -> "Minggu"
+                binding.chipBulanIni.id -> "Bulan"
+                binding.chipTahunIni.id -> "Tahun"
+                else -> "Semua"
+            }
+            
+            if (presetFilter != "Semua") {
+                // Reset custom date picker when preset is chosen
+                startDate = null
+                endDate = null
+                updateDateDisplay()
+            }
+            applyFilters()
         }
     }
 
@@ -78,6 +101,10 @@ class RiwayatActivity : AppCompatActivity() {
                 endCal.set(Calendar.MILLISECOND, 999)
                 endDate = endCal.timeInMillis
 
+                // Reset preset filter when custom date is picked
+                binding.chipSemua.isChecked = true
+                presetFilter = "Semua"
+
                 updateDateDisplay()
                 applyFilters()
             }
@@ -87,6 +114,8 @@ class RiwayatActivity : AppCompatActivity() {
         binding.btnResetFilter.setOnClickListener {
             startDate = null
             endDate = null
+            binding.chipSemua.isChecked = true
+            presetFilter = "Semua"
             updateDateDisplay()
             applyFilters()
         }
@@ -131,6 +160,17 @@ class RiwayatActivity : AppCompatActivity() {
         })
     }
 
+    private fun setupMetodeFilter() {
+        val metodes = listOf("Semua", "Cash", "Transfer", "Bayar Nanti")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, metodes)
+        binding.actvFilterMetode.setAdapter(adapter)
+
+        binding.actvFilterMetode.setOnItemClickListener { parent, _, position, _ ->
+            selectedMetode = parent.getItemAtPosition(position).toString()
+            applyFilters()
+        }
+    }
+
     private fun applyFilters() {
         val query = binding.etSearch.text.toString().lowercase()
         
@@ -140,14 +180,48 @@ class RiwayatActivity : AppCompatActivity() {
             val matchSearch = t.namaPembeli.lowercase().contains(query) || 
                              t.items.any { it.product?.namaBarang?.lowercase()?.contains(query) == true }
             
-            // 2. Filter Date Range
-            val matchDate = if (startDate != null && endDate != null) {
-                t.timestamp in startDate!!..endDate!!
-            } else {
-                true
+            // 2. Filter Date Range (Custom Picker or Preset)
+            val matchDate = when {
+                startDate != null && endDate != null -> {
+                    t.timestamp in startDate!!..endDate!!
+                }
+                presetFilter == "Minggu" -> {
+                    val cal = Calendar.getInstance()
+                    val now = cal.timeInMillis
+                    cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+                    cal.set(Calendar.HOUR_OF_DAY, 0)
+                    val startOfWeek = cal.timeInMillis
+                    t.timestamp in startOfWeek..now
+                }
+                presetFilter == "Bulan" -> {
+                    val cal = Calendar.getInstance()
+                    val now = cal.timeInMillis
+                    cal.set(Calendar.DAY_OF_MONTH, 1)
+                    cal.set(Calendar.HOUR_OF_DAY, 0)
+                    val startOfMonth = cal.timeInMillis
+                    t.timestamp in startOfMonth..now
+                }
+                presetFilter == "Tahun" -> {
+                    val cal = Calendar.getInstance()
+                    val now = cal.timeInMillis
+                    cal.set(Calendar.DAY_OF_YEAR, 1)
+                    cal.set(Calendar.HOUR_OF_DAY, 0)
+                    val startOfYear = cal.timeInMillis
+                    t.timestamp in startOfYear..now
+                }
+                else -> true
+            }
+
+            // 3. Filter Metode Pembayaran
+            val matchMetode = when (selectedMetode) {
+                "Semua" -> true
+                "Cash" -> t.metodePembayaran == "Cash"
+                "Transfer" -> t.metodePembayaran == "Transfer"
+                "Bayar Nanti" -> t.metodePembayaran == "Bayar Nanti"
+                else -> true
             }
             
-            matchSearch && matchDate
+            matchSearch && matchDate && matchMetode
         })
 
         updateListView()
@@ -156,15 +230,17 @@ class RiwayatActivity : AppCompatActivity() {
     private fun updateListView() {
         val displayList = filteredList.map { t ->
             val date = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault()).format(Date(t.timestamp))
-            "$date - ${t.namaPembeli} - ${FormatterUtil.formatRupiah(t.totalHarga)}"
+            val deletedTag = if (t.deleted) " [DIHAPUS]" else ""
+            "$date - ${t.namaPembeli}$deletedTag - ${FormatterUtil.formatRupiah(t.totalHarga)}"
         }
 
         val adapter = ArrayAdapter(this, R.layout.item_riwayat_list, displayList)
         binding.lvRiwayat.adapter = adapter
 
         binding.lvRiwayat.setOnItemClickListener { _, _, position, _ ->
+            val transaksi = filteredList[position]
             val intent = Intent(this, DetailRiwayatActivity::class.java)
-            intent.putExtra("ID", filteredList[position].id)
+            intent.putExtra("ID", transaksi.id)
             startActivity(intent)
         }
     }

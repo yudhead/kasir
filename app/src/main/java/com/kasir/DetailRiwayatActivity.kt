@@ -36,6 +36,7 @@ class DetailRiwayatActivity : AppCompatActivity() {
                 if (t != null) {
                     transaksi = t
                     tampilkanData(t)
+                    setupRestoreButton(t)
                 }
             }
         }
@@ -54,8 +55,8 @@ class DetailRiwayatActivity : AppCompatActivity() {
     }
 
     private fun tampilkanData(t: TransactionModel) {
-        // Menampilkan Nomor Struk dan Tanggal dari Firebase ke Layar HP
-        binding.tvDetailInfo.text = """
+        if (t.deleted) {
+            binding.tvDetailInfo.text = "TRANSAKSI INI TELAH DIHAPUS\n\n" + """
             No. Struk: ${t.nomorStruk}
             Pembeli: ${t.namaPembeli}
             Tanggal: ${t.tanggalWaktu}
@@ -63,7 +64,23 @@ class DetailRiwayatActivity : AppCompatActivity() {
             Status: ${t.statusBayar}
             
             TOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}
-        """.trimIndent()
+            """.trimIndent()
+            binding.tvDetailInfo.setTextColor(android.graphics.Color.RED)
+            binding.btnCetakUlangStruk.visibility = View.GONE
+        } else {
+            binding.tvDetailInfo.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+            binding.btnCetakUlangStruk.visibility = View.VISIBLE
+            // Menampilkan Nomor Struk dan Tanggal dari Firebase ke Layar HP
+            binding.tvDetailInfo.text = """
+                No. Struk: ${t.nomorStruk}
+                Pembeli: ${t.namaPembeli}
+                Tanggal: ${t.tanggalWaktu}
+                Metode: ${t.metodePembayaran}
+                Status: ${t.statusBayar}
+                
+                TOTAL AKHIR: ${FormatterUtil.formatRupiah(t.totalHarga)}
+            """.trimIndent()
+        }
 
         var itemsText = ""
         for (item in t.items) {
@@ -87,8 +104,24 @@ class DetailRiwayatActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // LOGIKA CETAK STRUK BLUETOOTH
+    private fun setupRestoreButton(t: TransactionModel) {
+        if (t.deleted && t.statusBayar == "BELUM_BAYAR") {
+            binding.btnRestoreBayarNanti.visibility = View.VISIBLE
+            binding.btnRestoreBayarNanti.setOnClickListener {
+                Firebase.database.reference.child("transactions").child(t.id).child("deleted").setValue(false)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Transaksi dikembalikan ke daftar Bayar Nanti!", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Gagal mengembalikan transaksi", Toast.LENGTH_SHORT).show()
+                    }
+            }
+        } else {
+            binding.btnRestoreBayarNanti.visibility = View.GONE
+        }
+    }
+
     // ==========================================
 
     private fun cekIzinBluetoothDanCetak() {

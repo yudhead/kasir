@@ -144,6 +144,17 @@
             android:backgroundTint="#8E44AD"
             android:textColor="@android:color/white"
             android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btnRestoreBayarNanti"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Kembalikan Transaksi"
+            android:backgroundTint="#27AE60"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:visibility="gone"
             android:layout_marginBottom="24dp"/>
 
     </LinearLayout>

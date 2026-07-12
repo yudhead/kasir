@@ -226,38 +226,35 @@ class KasirActivity : AppCompatActivity() {
                             .distinct()
 
         var completedUpdates = 0
-        val totalProductsToUpdate = allProductIds.size
+        val productsToProcess = allProductIds.filter { id ->
+            val oldQty = CartManager.oldItems.find { it.product?.id == id }?.quantity ?: 0
+            val newQty = CartManager.keranjang.find { it.product?.id == id }?.quantity ?: 0
+            (newQty - oldQty) != 0
+        }
 
-        if (totalProductsToUpdate == 0) {
+        if (productsToProcess.isEmpty()) {
             finalisasiUpdate()
             return
         }
 
-        allProductIds.forEach { productId ->
+        productsToProcess.forEach { productId ->
             val oldQty = CartManager.oldItems.find { it.product?.id == productId }?.quantity ?: 0
             val newQty = CartManager.keranjang.find { it.product?.id == productId }?.quantity ?: 0
             val diff = newQty - oldQty
 
-            if (diff != 0) {
-                db.child("products").child(productId).child("stok").get().addOnSuccessListener { snapshot ->
-                    val currentStok = snapshot.getValue(Int::class.java) ?: 0
-                    val newStok = currentStok - diff
-                    
-                    db.child("products").child(productId).child("stok").setValue(newStok).addOnCompleteListener {
-                        completedUpdates++
-                        if (completedUpdates == totalProductsToUpdate) {
-                            finalisasiUpdate()
-                        }
-                    }
-                }.addOnFailureListener {
+            db.child("products").child(productId).child("stok").get().addOnSuccessListener { snapshot ->
+                val currentStok = snapshot.getValue(Int::class.java) ?: 0
+                val newStok = currentStok - diff
+                
+                db.child("products").child(productId).child("stok").setValue(newStok).addOnCompleteListener {
                     completedUpdates++
-                    if (completedUpdates == totalProductsToUpdate) {
+                    if (completedUpdates == productsToProcess.size) {
                         finalisasiUpdate()
                     }
                 }
-            } else {
+            }.addOnFailureListener {
                 completedUpdates++
-                if (completedUpdates == totalProductsToUpdate) {
+                if (completedUpdates == productsToProcess.size) {
                     finalisasiUpdate()
                 }
             }

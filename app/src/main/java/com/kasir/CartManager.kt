@@ -13,21 +13,16 @@ object CartManager {
     var mode = MODE_BARU
 
     var transaksiId = ""
-
     var namaPembeli = ""
+    var nomorStruk = ""
 
     fun bersihkanKeranjang() {
-
         keranjang.clear()
-
         oldItems.clear()
-
         totalHarga = 0
-
         mode = MODE_BARU
-
         transaksiId = ""
-
         namaPembeli = ""
+        nomorStruk = ""
     }
 }

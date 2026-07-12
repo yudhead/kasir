@@ -22,16 +22,17 @@ class BayarNantiActivity : AppCompatActivity() {
 
         binding.rvBayarNanti.layoutManager = LinearLayoutManager(this)
 
-        // Query khusus data yang belum lunas
+        // Query tanpa filter statusBayar di level database agar isDeleted bisa dicek di sisi client dengan benar
         Firebase.database.reference.child("transactions")
-            .orderByChild("statusBayar")
-            .equalTo("BELUM_BAYAR")
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     listBayarNanti.clear()
                     for (data in snapshot.children) {
                         val t = data.getValue(TransactionModel::class.java)
-                        if (t != null) listBayarNanti.add(t)
+                        // Filter manual: Harus BELUM_BAYAR DAN tidak dihapus
+                        if (t != null && t.statusBayar == "BELUM_BAYAR" && t.deleted == false) {
+                            listBayarNanti.add(t)
+                        }
                     }
                     // Gunakan adapter sederhana (bisa pakai adapter list biasa)
                     val adapter = BayarNantiAdapter(listBayarNanti) { transaksi ->

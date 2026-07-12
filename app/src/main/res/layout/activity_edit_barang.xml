@@ -58,10 +58,10 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Kategori"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:hint="Kategori (Pilih atau Ketik Baru)"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_marginBottom="16dp">
-            <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/etEditKategori"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

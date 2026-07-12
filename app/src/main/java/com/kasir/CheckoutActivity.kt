@@ -63,6 +63,24 @@ class CheckoutActivity : AppCompatActivity() {
             binding.etNamaPembeli.isEnabled = false
         }
 
+        // Awal load: Sembunyikan bagian upload jika defaultnya Cash
+        binding.btnUploadBukti.visibility = android.view.View.GONE
+        binding.ivBuktiBayar.visibility = android.view.View.GONE
+
+        // Listener perubahan metode pembayaran
+        binding.rgMetodePembayaran.setOnCheckedChangeListener { _, checkedId ->
+            if (checkedId == R.id.rbTransfer) {
+                binding.btnUploadBukti.visibility = android.view.View.VISIBLE
+                binding.ivBuktiBayar.visibility = android.view.View.VISIBLE
+            } else {
+                binding.btnUploadBukti.visibility = android.view.View.GONE
+                binding.ivBuktiBayar.visibility = android.view.View.GONE
+                // Opsional: Hapus imageUri jika pindah ke Cash/Bayar Nanti agar tidak tersimpan tidak sengaja
+                imageUri = null
+                binding.ivBuktiBayar.setImageResource(android.R.drawable.ic_menu_camera)
+            }
+        }
+
         binding.btnUploadBukti.setOnClickListener {
             cekIzinKamera()
         }
@@ -113,29 +131,17 @@ class CheckoutActivity : AppCompatActivity() {
             buktiPath = simpanFotoKeInternal(imageUri!!) ?: ""
         }
 
-        // 1. MENGAMBIL NOMOR TERAKHIR DARI FIREBASE
-        database.child("settings").child("last_receipt_number").get().addOnSuccessListener { snapshot ->
-            var lastNumber = snapshot.getValue(Int::class.java) ?: 0
-            lastNumber++ // Tambah 1
+        val status = if (binding.rbBayarNanti.isChecked) "BELUM_BAYAR" else "LUNAS"
+        val nama = binding.etNamaPembeli.text.toString()
+        val transactionId = if (CartManager.mode == CartManager.MODE_PELUNASAN || CartManager.mode == CartManager.MODE_EDIT) 
+            CartManager.transaksiId 
+        else 
+            database.child("transactions").push().key ?: ""
 
-            if (lastNumber > 9999) {
-                lastNumber = 1 // Reset jika lebih dari 9999
-            }
-
-            // Format jadi 4 digit (contoh: 0045)
-            val nomorFormat = String.format("%04d", lastNumber)
-
-            // Update nomor terbaru ke Firebase agar HP lain tahu
-            database.child("settings").child("last_receipt_number").setValue(lastNumber)
-
-            // 2. BUAT TANGGAL SAAT INI
+        // Fungsi internal untuk menyimpan data
+        fun simpanKeFirebase(nomorStruk: String) {
             val sdf = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
             val tanggalSaatIni = sdf.format(java.util.Date())
-
-            // 3. PROSES SIMPAN TRANSAKSI
-            val transactionId = if (CartManager.mode == CartManager.MODE_PELUNASAN) CartManager.transaksiId else database.child("transactions").push().key ?: ""
-            val status = if (binding.rbBayarNanti.isChecked) "BELUM_BAYAR" else "LUNAS"
-            val nama = binding.etNamaPembeli.text.toString()
 
             val transaksiBaru = TransactionModel(
                 id = transactionId,
@@ -146,14 +152,15 @@ class CheckoutActivity : AppCompatActivity() {
                 statusBayar = status,
                 metodePembayaran = metode,
                 buktiPembayaranPath = buktiPath,
-                nomorStruk = nomorFormat,
+                nomorStruk = nomorStruk,
                 tanggalWaktu = tanggalSaatIni
             )
 
-            // Simpan transaksi ke Firebase
             database.child("transactions").child(transactionId).setValue(transaksiBaru)
                 .addOnSuccessListener {
-                    if (status == "LUNAS") {
+                    // Hanya potong stok jika transaksi BARU (baik Cash, Transfer, atau Bayar Nanti)
+                    // Pelunasan dan Edit tidak potong stok lagi karena sudah ditangani
+                    if (CartManager.mode == CartManager.MODE_BARU) {
                         potongStokGudang()
                     }
                     transaksiTerakhir = transaksiBaru
@@ -164,11 +171,31 @@ class CheckoutActivity : AppCompatActivity() {
                     binding.btnProsesBayar.isEnabled = true
                     binding.btnProsesBayar.text = "Selesaikan Pembayaran"
                 }
+        }
 
-        }.addOnFailureListener {
-            Toast.makeText(this, "Gagal mengambil nomor urut. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
-            binding.btnProsesBayar.isEnabled = true
-            binding.btnProsesBayar.text = "Selesaikan Pembayaran"
+        // LOGIKA NOMOR STRUK: 
+        // 1. Jika status LUNAS dan belum punya nomor struk (transaksi baru atau pelunasan), ambil nomor baru.
+        // 2. Jika sudah ada nomor struk, gunakan yang lama.
+        // 3. Jika status BELUM_BAYAR (Bayar Nanti), nomor struk dikosongkan dulu sampai lunas.
+        if (status == "LUNAS" && CartManager.nomorStruk.isEmpty()) {
+            database.child("settings").child("last_receipt_number").get().addOnSuccessListener { snapshot ->
+                var lastNumber = snapshot.getValue(Int::class.java) ?: 0
+                lastNumber++
+
+                if (lastNumber > 9999) lastNumber = 1
+                val nomorFormat = String.format("%04d", lastNumber)
+
+                database.child("settings").child("last_receipt_number").setValue(lastNumber)
+                simpanKeFirebase(nomorFormat)
+
+            }.addOnFailureListener {
+                Toast.makeText(this, "Gagal mengambil nomor urut. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
+                binding.btnProsesBayar.isEnabled = true
+                binding.btnProsesBayar.text = "Selesaikan Pembayaran"
+            }
+        } else {
+            // Gunakan nomor yang sudah ada (berisi nomor lama atau tetap kosong jika BELUM_BAYAR)
+            simpanKeFirebase(CartManager.nomorStruk)
         }
     }
 
@@ -178,6 +205,20 @@ class CheckoutActivity : AppCompatActivity() {
     // ==========================================
 
     private fun tampilkanDialogCetakStruk() {
+        val t = transaksiTerakhir ?: return
+        
+        if (t.statusBayar == "BELUM_BAYAR") {
+            AlertDialog.Builder(this)
+                .setTitle("Berhasil!")
+                .setMessage("Transaksi dipindahkan ke menu Bayar Nanti")
+                .setPositiveButton("OK") { _, _ ->
+                    selesaiDanTutup()
+                }
+                .setCancelable(false)
+                .show()
+            return
+        }
+
         AlertDialog.Builder(this)
             .setTitle("Pembayaran Berhasil!")
             .setMessage("Apakah Anda ingin mencetak struk belanja?")

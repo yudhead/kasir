@@ -37,26 +37,91 @@
             android:contentDescription="Download PDF" />
     </RelativeLayout>
 
-    <EditText
-        android:id="@+id/etSearch"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:alpha="0.8"
-        android:hint="Cari pembeli atau barang..."
-        android:background="@drawable/bg_edittext_rounded"
-        android:paddingHorizontal="12dp"
-        android:textSize="14sp"
-        android:layout_marginBottom="12dp"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:drawablePadding="8dp"
-        android:textColor="@color/text_primary"
-        android:textColorHint="@color/text_secondary" android:inputType="text"/>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:alpha="0.8"
+            android:hint="Cari pembeli atau barang..."
+            android:background="@drawable/bg_edittext_rounded"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="8dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:inputType="text" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilFilterMetode"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="140dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="8dp"
+            app:hintEnabled="false">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actvFilterMetode"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:inputType="none"
+                android:padding="0dp"
+                android:text="Semua"
+                android:textSize="12sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:layout_marginBottom="8dp">
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSemua"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Semua"
+                android:checked="true"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMingguIni"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Minggu Ini"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipBulanIni"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bulan Ini"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTahunIni"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tahun Ini"/>
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/btnPickDate"
