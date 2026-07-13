@@ -9,9 +9,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.kasir" />
-                  <option name="mobileSdkAppId" value="1:321891695640:android:a919bcb3179da2ffb3176d" />
-                  <option name="projectId" value="kasir-b6641" />
-                  <option name="projectNumber" value="321891695640" />
+                  <option name="mobileSdkAppId" value="1:723517193855:android:74c06ee31d415f0926c94a" />
+                  <option name="projectId" value="kasir-4ba7d" />
+                  <option name="projectNumber" value="723517193855" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

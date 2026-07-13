@@ -339,15 +339,48 @@ class CheckoutActivity : AppCompatActivity() {
             try {
                 val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
                 val socket = device.createRfcommSocketToServiceRecord(uuid)
-                socket.connect() // Kalau di sini gagal, tidak apa-apa karena Logcat sudah jalan di atas
+                socket.connect()
 
                 val outputStream = socket.outputStream
 
+                // 1. KODE BANGUNKAN PRINTER
                 val initPrinter = byteArrayOf(0x1B, 0x40)
                 outputStream.write(initPrinter)
 
+                // 2. KODE CETAK LOGO (Tambahan Baru)
+                try {
+                    // Ambil logo dari folder drawable
+                    val bitmapAsli = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.logo)
+
+                    if (bitmapAsli != null) {
+                        // Kertas 58mm maksimal lebarnya 384 dot. Kita kecilkan gambar ke 200x200 agar proporsional
+                        val ukuranLogo = 200
+                        val bitmapKecil = android.graphics.Bitmap.createScaledBitmap(bitmapAsli, ukuranLogo, ukuranLogo, false)
+
+                        // Suruh printer meletakkan logo di tengah (Center Align)
+                        outputStream.write(byteArrayOf(0x1B, 0x61, 0x01))
+
+                        // Ubah gambar dan kirim ke printer
+                        val logoBytes = ubahBitmapKeBytePrinter(bitmapKecil)
+                        outputStream.write(logoBytes)
+
+                        // Kembalikan susunan ke kiri (Left Align) karena teks Anda sudah disetel manual pakai spasi
+                        outputStream.write(byteArrayOf(0x1B, 0x61, 0x00))
+                    }
+                } catch (e: Exception) {
+                    // Abaikan dan lanjut cetak teks jika gambar gagal diproses
+                    e.printStackTrace()
+                }
+
+                // 3. KIRIM TEKS STRUK
                 outputStream.write(struk.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+
+                // (Opsional) Kode paksa tampil untuk simulator
+                // val paksaTampil = byteArrayOf(0x0D, 0x0A, 0x0D, 0x0A)
+                // outputStream.write(paksaTampil)
+
                 outputStream.flush()
+                Thread.sleep(500) // Jeda agar memori printer tidak putus di tengah jalan
                 socket.close()
 
                 runOnUiThread {
@@ -362,6 +395,51 @@ class CheckoutActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+    // ==========================================
+    // FUNGSI UNTUK MENGUBAH GAMBAR KE BAHASA PRINTER
+    // ==========================================
+    private fun ubahBitmapKeBytePrinter(bitmap: android.graphics.Bitmap): ByteArray {
+        val width = bitmap.width
+        val height = bitmap.height
+        val widthBytes = (width + 7) / 8
+        val command = ByteArray(8 + widthBytes * height)
+
+        // Perintah mesin GS v 0 (Print Raster Image)
+        command[0] = 0x1D
+        command[1] = 0x76
+        command[2] = 0x30
+        command[3] = 0x00
+
+        command[4] = (widthBytes and 0xFF).toByte()
+        command[5] = ((widthBytes shr 8) and 0xFF).toByte()
+        command[6] = (height and 0xFF).toByte()
+        command[7] = ((height shr 8) and 0xFF).toByte()
+
+        var offset = 8
+        for (y in 0 until height) {
+            for (x in 0 until widthBytes) {
+                var b = 0
+                for (k in 0..7) {
+                    val px = x * 8 + k
+                    if (px < width) {
+                        val pixel = bitmap.getPixel(px, y)
+                        val r = android.graphics.Color.red(pixel)
+                        val g = android.graphics.Color.green(pixel)
+                        val bColor = android.graphics.Color.blue(pixel)
+                        val a = android.graphics.Color.alpha(pixel)
+
+                        // Menentukan warna hitam/putih (Luminance)
+                        val luminance = (0.299 * r + 0.587 * g + 0.114 * bColor).toInt()
+                        if (luminance < 128 && a > 128) {
+                            b = b or (1 shl (7 - k))
+                        }
+                    }
+                }
+                command[offset++] = b.toByte()
+            }
+        }
+        return command
     }
 
     // ==========================================
