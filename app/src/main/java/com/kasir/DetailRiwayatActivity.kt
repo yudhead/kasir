@@ -176,21 +176,22 @@ class DetailRiwayatActivity : AppCompatActivity() {
 
         Thread {
             try {
-                // 1. SUSUN TEKS & TAMPILKAN LOGCAT (Sama persis dengan Checkout)
-                val struk = java.lang.StringBuilder()
-                struk.append("\n")
-                struk.append("         JAYATRI KEDIRI         \n")
-                struk.append("      IG: @jayatrimini_4wd      \n")
-                struk.append("    TikTok: @JAYATRI_MINI4WD    \n")
-                struk.append("       WA: 0823-3311-1905       \n")
-                struk.append("================================\n")
+                // 1. SIAPKAN BAGIAN-BAGIAN STRUK
+                val header = java.lang.StringBuilder()
+                header.append("\n")
+                header.append("JAYATRI KEDIRI\n")
+                header.append("IG: @jayatrimini_4wd\n")
+                header.append("TikTok: @JAYATRI_MINI4WD\n")
+                header.append("WA: 0823-3311-1905\n")
+                header.append("================================\n")
 
-                struk.append("Tanggal   : ${t.tanggalWaktu}\n")
-                struk.append("No. Struk : ${t.nomorStruk}\n")
-                struk.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
-                struk.append("Metode    : ${t.metodePembayaran}\n")
-                struk.append("Status    : ${t.statusBayar}\n")
-                struk.append("--------------------------------\n")
+                val body = java.lang.StringBuilder()
+                body.append("Tanggal   : ${t.tanggalWaktu}\n")
+                body.append("No. Struk : ${t.nomorStruk}\n")
+                body.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
+                body.append("Metode    : ${t.metodePembayaran}\n")
+                body.append("Status    : ${t.statusBayar}\n")
+                body.append("--------------------------------\n")
 
                 for (item in t.items) {
                     val namaBarang = item.product?.namaBarang ?: ""
@@ -198,20 +199,22 @@ class DetailRiwayatActivity : AppCompatActivity() {
                     val harga = item.product?.harga ?: (item.product?.hargaJual ?: 0)
                     val subtotal = qty * harga
 
-                    struk.append("$namaBarang\n")
-                    struk.append("    $qty x Rp $harga = Rp $subtotal\n")
+                    body.append("$namaBarang\n")
+                    body.append("    $qty x Rp $harga = Rp $subtotal\n")
                 }
+                body.append("--------------------------------\n")
 
-                struk.append("--------------------------------\n")
-                struk.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
-                struk.append("================================\n")
-                struk.append("         (CETAK ULANG)          \n") // Tanda Cetak Ulang
-                struk.append("  Terima Kasih Atas Kunjungan   \n")
-                struk.append("           Anda!                \n")
-                struk.append("\n\n\n")
+                val footer = java.lang.StringBuilder()
+                footer.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
+                footer.append("================================\n")
+                footer.append("(CETAK ULANG)\n")
+                footer.append("Terima Kasih Atas Kunjungan\n")
+                footer.append("Anda!\n")
+                footer.append("\n\n\n")
 
-                // Tampilkan ke Logcat untuk testing
-                android.util.Log.d("CEK_STRUK_KASIR", "\n" + struk.toString())
+                // Gabungkan untuk logcat saja
+                val fullStrukLog = header.toString() + body.toString() + footer.toString()
+                android.util.Log.d("CEK_STRUK_KASIR", "\n" + fullStrukLog)
 
                 // 2. KONEKSI BLUETOOTH
                 val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -220,40 +223,39 @@ class DetailRiwayatActivity : AppCompatActivity() {
 
                 val outputStream = socket.outputStream
 
+                // KODE ALIGNMENT
+                val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
+                val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
+
                 // 1. KODE BANGUNKAN PRINTER
-                val initPrinter = byteArrayOf(0x1B, 0x40)
-                outputStream.write(initPrinter)
+                outputStream.write(byteArrayOf(0x1B, 0x40))
 
-                // 2. KODE CETAK LOGO (Tambahan Baru)
+                // 2. KODE CETAK LOGO
                 try {
-                    // Ambil logo dari folder drawable
                     val bitmapAsli = BitmapFactory.decodeResource(resources, R.drawable.logo)
-
                     if (bitmapAsli != null) {
-                        // Kertas 58mm maksimal lebarnya 384 dot. Kita kecilkan gambar ke 200x200 agar proporsional
                         val ukuranLogo = 200
                         val bitmapKecil = android.graphics.Bitmap.createScaledBitmap(bitmapAsli, ukuranLogo, ukuranLogo, false)
-
-                        // Suruh printer meletakkan logo di tengah (Center Align)
-                        outputStream.write(byteArrayOf(0x1B, 0x61, 0x01))
-
-                        // Ubah gambar dan kirim ke printer
+                        outputStream.write(alignCenter)
                         val logoBytes = ubahBitmapKeBytePrinter(bitmapKecil)
                         outputStream.write(logoBytes)
-
-                        // Kembalikan susunan ke kiri (Left Align)
-                        outputStream.write(byteArrayOf(0x1B, 0x61, 0x00))
                     }
-                } catch (e: Exception) {
-                    // Abaikan dan lanjut cetak teks jika gambar gagal diproses
-                    e.printStackTrace()
-                }
+                } catch (e: Exception) { e.printStackTrace() }
 
-                // 3. KIRIM TEKS STRUK
-                outputStream.write(struk.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+                // 3. CETAK HEADER (CENTER)
+                outputStream.write(alignCenter)
+                outputStream.write(header.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+
+                // 4. CETAK BODY (LEFT)
+                outputStream.write(alignLeft)
+                outputStream.write(body.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+
+                // 5. CETAK FOOTER (CENTER)
+                outputStream.write(alignCenter)
+                outputStream.write(footer.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
 
                 outputStream.flush()
-                Thread.sleep(500) // Jeda agar memori printer tidak putus di tengah jalan
+                Thread.sleep(500)
                 socket.close()
 
                 runOnUiThread {

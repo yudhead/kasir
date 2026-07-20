@@ -164,6 +164,25 @@
         android:headerDividersEnabled="false"
         android:footerDividersEnabled="false"
         app:layout_constraintTop_toBottomOf="@id/headerRiwayat"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toTopOf="@id/cardTotal" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardTotal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:cardElevation="16dp"
+        app:cardBackgroundColor="@color/surface">
+        <TextView
+            android:id="@+id/tvTotalRiwayat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="Total: Rp 0"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:textAlignment="viewEnd"/>
+    </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

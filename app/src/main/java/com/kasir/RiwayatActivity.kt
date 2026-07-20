@@ -237,6 +237,10 @@ class RiwayatActivity : AppCompatActivity() {
         val adapter = ArrayAdapter(this, R.layout.item_riwayat_list, displayList)
         binding.lvRiwayat.adapter = adapter
 
+        // Update Total pada UI sesuai filter
+        val total = filteredList.sumOf { it.totalHarga }
+        binding.tvTotalRiwayat.text = "Total: ${FormatterUtil.formatRupiah(total)}"
+
         binding.lvRiwayat.setOnItemClickListener { _, _, position, _ ->
             val transaksi = filteredList[position]
             val intent = Intent(this, DetailRiwayatActivity::class.java)
@@ -297,6 +301,15 @@ class RiwayatActivity : AppCompatActivity() {
             }
 
             document.add(table)
+
+            // Tambahkan Total Keseluruhan di bawah tabel
+            val grandTotal = filteredList.sumOf { it.totalHarga }
+            document.add(Paragraph("\n"))
+            document.add(Paragraph("TOTAL KESELURUHAN: ${FormatterUtil.formatRupiah(grandTotal)}")
+                .setBold()
+                .setFontSize(14f)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.RIGHT))
+
             document.close()
 
             // Beritahu sistem bahwa ada file baru agar muncul di File Manager/Gallery
