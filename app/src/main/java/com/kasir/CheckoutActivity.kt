@@ -308,14 +308,13 @@ class CheckoutActivity : AppCompatActivity() {
         }
 
         Thread {
-            // 1. SIAPKAN BAGIAN-BAGIAN STRUK
+            // 1. SIAPKAN BAGIAN-BAGIAN STRUK (Hapus \n di awal header)
             val header = java.lang.StringBuilder()
-            header.append("\n")
             header.append("JAYATRI KEDIRI\n")
             header.append("IG: @jayatrimini_4wd\n")
             header.append("TikTok: @JAYATRI_MINI4WD\n")
             header.append("WA: 0823-3311-1905\n")
-            header.append("================================\n")
+            header.append("================================================\n")
 
             val body = java.lang.StringBuilder()
             body.append("Tanggal   : ${t.tanggalWaktu}\n")
@@ -323,7 +322,7 @@ class CheckoutActivity : AppCompatActivity() {
             body.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
             body.append("Metode    : ${t.metodePembayaran}\n")
             body.append("Status    : ${t.statusBayar}\n")
-            body.append("--------------------------------\n")
+            body.append("------------------------------------------------\n")
 
             for (item in t.items) {
                 val namaBarang = item.product?.namaBarang ?: ""
@@ -335,17 +334,16 @@ class CheckoutActivity : AppCompatActivity() {
                 body.append("    $qty x Rp $harga = Rp $subtotal\n")
             }
             body.append("--------------------------------\n")
-
+            body.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
+            body.append("================================================\n")
             val footer = java.lang.StringBuilder()
-            footer.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
-            footer.append("================================\n")
-            footer.append("Terima Kasih Atas Kunjungan\n")
-            footer.append("Anda!\n")
+            footer.append("  Terima Kasih Atas Kunjungan  \n") // Tambah sedikit spasi bantu
+            footer.append("             Anda!             \n")
             footer.append("\n\n\n")
 
-            // Gabungkan untuk logcat saja
-            val fullStrukLog = header.toString() + body.toString() + footer.toString()
-            android.util.Log.d("CEK_STRUK_KASIR", "\n" + fullStrukLog)
+            // Gabungkan untuk logcat
+            val fullStrukLog = "\n" + header.toString() + body.toString() + footer.toString()
+            android.util.Log.d("CEK_STRUK_KASIR", fullStrukLog)
 
             // 2. BARU COBA KONEKSI KE PRINTER BLUETOOTH
             try {
@@ -355,12 +353,15 @@ class CheckoutActivity : AppCompatActivity() {
 
                 val outputStream = socket.outputStream
 
-                // KODE ALIGNMENT
+                // KODE ALIGNMENT (Bahasa Mesin)
                 val alignCenter = byteArrayOf(0x1B, 0x61, 0x01)
                 val alignLeft = byteArrayOf(0x1B, 0x61, 0x00)
 
                 // 1. KODE BANGUNKAN PRINTER
                 outputStream.write(byteArrayOf(0x1B, 0x40))
+
+                // BERI ENTER KOSONG SEBELUM LOGO/TEKS (Agar kertas naik sedikit)
+                outputStream.write("\n".toByteArray())
 
                 // 2. KODE CETAK LOGO
                 try {
@@ -368,11 +369,15 @@ class CheckoutActivity : AppCompatActivity() {
                     if (bitmapAsli != null) {
                         val ukuranLogo = 200
                         val bitmapKecil = android.graphics.Bitmap.createScaledBitmap(bitmapAsli, ukuranLogo, ukuranLogo, false)
-                        outputStream.write(alignCenter)
+
+                        outputStream.write(alignCenter) // Set logo ke tengah
                         val logoBytes = ubahBitmapKeBytePrinter(bitmapKecil)
                         outputStream.write(logoBytes)
+                        outputStream.write("\n".toByteArray()) // Enter setelah logo
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
 
                 // 3. CETAK HEADER (CENTER)
                 outputStream.write(alignCenter)
@@ -385,6 +390,10 @@ class CheckoutActivity : AppCompatActivity() {
                 // 5. CETAK FOOTER (CENTER)
                 outputStream.write(alignCenter)
                 outputStream.write(footer.toString().toByteArray(java.nio.charset.StandardCharsets.US_ASCII))
+
+                // Kode paksa tampil untuk simulator (CRLF) - Hapus jika sudah pakai printer asli
+                // val paksaTampil = byteArrayOf(0x0D, 0x0A)
+                // outputStream.write(paksaTampil)
 
                 outputStream.flush()
                 Thread.sleep(500)

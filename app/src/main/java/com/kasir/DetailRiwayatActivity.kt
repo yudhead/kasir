@@ -176,14 +176,13 @@ class DetailRiwayatActivity : AppCompatActivity() {
 
         Thread {
             try {
-                // 1. SIAPKAN BAGIAN-BAGIAN STRUK
+                // 1. SIAPKAN BAGIAN-BAGIAN STRUK (Hapus \n di awal header)
                 val header = java.lang.StringBuilder()
-                header.append("\n")
                 header.append("JAYATRI KEDIRI\n")
                 header.append("IG: @jayatrimini_4wd\n")
                 header.append("TikTok: @JAYATRI_MINI4WD\n")
                 header.append("WA: 0823-3311-1905\n")
-                header.append("================================\n")
+                header.append("================================================\n")
 
                 val body = java.lang.StringBuilder()
                 body.append("Tanggal   : ${t.tanggalWaktu}\n")
@@ -191,7 +190,7 @@ class DetailRiwayatActivity : AppCompatActivity() {
                 body.append("Pelanggan : ${if(t.namaPembeli.isEmpty()) "Umum" else t.namaPembeli}\n")
                 body.append("Metode    : ${t.metodePembayaran}\n")
                 body.append("Status    : ${t.statusBayar}\n")
-                body.append("--------------------------------\n")
+                body.append("------------------------------------------------\n")
 
                 for (item in t.items) {
                     val namaBarang = item.product?.namaBarang ?: ""
@@ -202,19 +201,19 @@ class DetailRiwayatActivity : AppCompatActivity() {
                     body.append("$namaBarang\n")
                     body.append("    $qty x Rp $harga = Rp $subtotal\n")
                 }
-                body.append("--------------------------------\n")
+                body.append("------------------------------------------------\n")
+                body.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
+                body.append("================================================\n")
 
                 val footer = java.lang.StringBuilder()
-                footer.append("TOTAL BELANJA : Rp ${t.totalHarga}\n")
-                footer.append("================================\n")
-                footer.append("(CETAK ULANG)\n")
-                footer.append("Terima Kasih Atas Kunjungan\n")
-                footer.append("Anda!\n")
+                footer.append("         (CETAK ULANG)         \n")
+                footer.append("  Terima Kasih Atas Kunjungan  \n")
+                footer.append("             Anda!             \n")
                 footer.append("\n\n\n")
 
-                // Gabungkan untuk logcat saja
-                val fullStrukLog = header.toString() + body.toString() + footer.toString()
-                android.util.Log.d("CEK_STRUK_KASIR", "\n" + fullStrukLog)
+                // Gabungkan untuk logcat (tambahkan \n manual di awal untuk tampilan log)
+                val fullStrukLog = "\n" + header.toString() + body.toString() + footer.toString()
+                android.util.Log.d("CEK_STRUK_KASIR", fullStrukLog)
 
                 // 2. KONEKSI BLUETOOTH
                 val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -230,6 +229,9 @@ class DetailRiwayatActivity : AppCompatActivity() {
                 // 1. KODE BANGUNKAN PRINTER
                 outputStream.write(byteArrayOf(0x1B, 0x40))
 
+                // BERI ENTER KOSONG SEBELUM LOGO/TEKS
+                outputStream.write("\n".toByteArray())
+
                 // 2. KODE CETAK LOGO
                 try {
                     val bitmapAsli = BitmapFactory.decodeResource(resources, R.drawable.logo)
@@ -239,6 +241,7 @@ class DetailRiwayatActivity : AppCompatActivity() {
                         outputStream.write(alignCenter)
                         val logoBytes = ubahBitmapKeBytePrinter(bitmapKecil)
                         outputStream.write(logoBytes)
+                        outputStream.write("\n".toByteArray()) // Enter setelah logo
                     }
                 } catch (e: Exception) { e.printStackTrace() }
 
